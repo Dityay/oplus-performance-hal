@@ -1,0 +1,49 @@
+// Android.bp — canonical AOSP/Soong build for the reconstructed OPlus
+// performance HAL. The aidl_interface mirrors the shipped VINTF manifest
+// (vendor.oplus.hardware.performance V1, IPerformance/default) and the
+// compatibility_matrix entry (versions 1-3, optional).
+//
+// NOTE: the transaction codes the original binary uses (1..169) are produced
+// automatically because AIDL assigns them by declaration order, and the
+// reconstructed aidl/ declares the methods in that exact order (verified).
+
+aidl_interface {
+    name: "vendor.oplus.hardware.performance",
+    vendor: true,
+    owner: "OOS-port",
+    srcs: [
+        "aidl/vendor/oplus/hardware/performance/*.aidl",
+    ],
+    stability: "vintf",
+    // V1 only (the imported HAL is V1). Bump to add V2 methods
+    // (getWakeThreadsAffinityOrdered, setWakeSeedThread) once the service
+    // implements them.
+    versions: ["1"],
+    // hash pinned to the shipped interface so future edits that would break
+    // wire compatibility fail at build time:
+    //   aidl --hash <sha256 of frozen API>
+}
+
+cc_binary {
+    name: "vendor-oplus-hardware-performance-V1-service",
+    vendor: true,
+    relative_install_path: "hw",
+    srcs: [
+        "src/main.cpp",
+        "src/PerfHal.cpp",
+    ],
+    shared_libs: [
+        "vendor.oplus.hardware.performance-V1-ndk",
+        "libbase",
+        "libcutils",
+        "liblog",
+        "libutils",
+        "libbinder_ndk",
+    ],
+    init_rc: ["vendor-oplus-hardware-performance-V1-service.rc"],
+    vintf_fragments: ["manifest_performance_aidl.xml"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}

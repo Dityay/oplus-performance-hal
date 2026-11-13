@@ -1,0 +1,102 @@
+  existMemMonitor -> 1
+  getAcmDirFlag -> 0
+  getAcmOpstat -> 0
+  getAcmPkgFlag -> 0
+  getDdrResidency -> 4413 bytes
+  getDevinfoUfsInfo -> 43114 bytes
+  getDevinfoDDRInfo -> 4413 bytes
+  getDevinfoUfsVersionInfo -> 43114 bytes
+  getExt4FragScore -> 228 bytes
+  getExt4FreefragInfo -> 95 bytes
+  getF2fsMovedBlks -> 14 bytes
+  getHIAllocWait -> reqId=0 stats=0
+  getHICpuInfo -> 32 bytes
+  getHICpuLoading -> 32 bytes
+  getHIDState -> reqId=0 stats=0
+  getHIEmcdrvIowait -> reqId=0 stats=0
+  getHIFsyncWait -> reqId=0 stats=0
+  getHIIonWait -> reqId=0 stats=0
+  getHIIowait -> reqId=0 stats=0
+  getHIIowaitHung -> reqId=0 stats=0
+  getHIKswapdLoading -> reqId=0 stats=0
+  getHISchedLatency -> reqId=0 stats=0
+  getHIScmCall -> reqId=0 stats=0
+  getHIUfsFeature -> reqId=0 stats=0
+  getKernelVersion -> 510
+  getKmallocDebug -> 29433 bytes
+  getKmallocOrigin -> 29433 bytes
+  getKmallocUsed -> 29433 bytes
+  getMemMonitor -> 1234 bytes
+  getOswapVersion -> -1
+  getUfsSignalRecordUpload -> 43114 bytes
+  getUfsplusHpbStatus -> 2
+  getUfsplusTwStatus -> 2
+  getVmallocDebug -> 262144 bytes
+  getVmallocHashCal -> 262144 bytes
+  getVmallocUsed -> 262144 bytes
+  getallocwait -> 105 bytes
+  getdstate -> 55 bytes
+  getfsyncwait -> 107 bytes
+  getionwait -> 107 bytes
+  getiowait -> 107 bytes
+  getschedlatency -> 1782 bytes
+  hybridswap_memcg_para_read -> 11 bytes
+  hybridswap_zram_para_read -> 72 bytes
+  isJankTaskTrackEnable -> 1
+  readCallStack -> 377 bytes
+  readClmEnable -> 1 bytes
+  readClmHighLoadAll -> 2 bytes
+  readClmHighLoadGrp -> 2 bytes
+  readClmLowLoadGrp -> 2 bytes
+  readCpuTaskstats -> 2388 bytes
+  readDBacktrace -> 308 bytes
+  readDConvert -> 262144 bytes
+  readFgFreqsThreshold -> 7 bytes
+  readIOBacktrace -> 377 bytes
+  readIomonitorInfo -> 6195 bytes
+  readJankCpuIndicator -> 31 bytes
+  readJankCpuInfo -> 1896 bytes
+  readJankCpuInfoSig -> 1896 bytes
+  readJankCpuLoad -> 32 bytes
+  readJankCpuLoad32 -> 32 bytes
+  readJankCpuLoad32Scale -> 32 bytes
+  readJankTaskTrack -> 13 bytes
+  readJankTaskTrackByPid -> 13 bytes
+  readJankVersion -> 174 bytes
+  readKmallocDebugCreate -> 29433 bytes
+  readLimitTable -> 262144 bytes
+  readMemleakDetectThread -> 45 bytes
+  readMemoryByPids -> status=1 count=1
+      first: pid=18335 rss=6372 pss=1962 comm=Binder:ipf
+
+  readMemoryByUids -> status=1 count=1
+      first: pid=1000 rss=3903032 pss=797899 comm=uid
+  readNandswapProc -> 176 bytes
+  readNormalizeRealTime -> 55 bytes
+  readNormalizeRunningTime -> 55 bytes
+  readOplusReserve3 -> 0 bytes
+  readOsvelteVersion -> v=1 major=0 minor=0 patch=0
+  readPidsSet -> 0 bytes
+  readRealTime -> 17 bytes
+  readRunningTime -> 17 bytes
+  readSchedInfoThreshold -> 262144 bytes
+  readSgeFreqInfo -> 10 bytes
+  readSgeInfo -> 50 bytes
+  readStorageFeature -> 228 bytes
+  readTargetProcess -> 16 bytes
+  readTaskCpustatsEnable -> 0 bytes
+  readTaskSchedInfo -> 262144 bytes
+  readTidsSet -> 0 bytes
+  readUxTaskTrack -> 13 bytes
+  readVaFeature -> 17630 bytes
+  readVersion -> 174 bytes
+  searchAcmNomediaDirName -> 0
+  readTmemorySysdirtypages -> 0 bytes
+  readTmemoryDirtypages -> 0 bytes
+  readTmemoryErrorStat -> 0 bytes
+  readTmemoryIoLatency -> 0 bytes
+  getClmThreshold -> 2 bytes
+  getClmMuxSwitch -> 1 bytes
+  getInterfaceVersion -> 1
+  getInterfaceHash -> 40 bytes
+SUMMARY methods=171 skipped_mutating=73 exceptions=0

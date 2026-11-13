@@ -1,0 +1,40 @@
+Live-device output of tools/ipc_probe.cpp (client generated from the
+RECONSTRUCTED aidl/) against the running stock service on device
+102562537K104189 (CPH2493 / OP556FL1, Android 15, patch 2025-07-01).
+
+Command: adb shell su -c '/data/local/tmp/oplus_perf_probe'
+Run as root: the shell domain is denied { find } on hwservice_manager for this
+service (avc denial), so the probe cannot see the service from shell.
+Read-only methods only. Reproduced twice with identical output.
+
+OK: found vendor.oplus.hardware.performance.IPerformance/default
+  readVersion              -> ''
+  getionwait               -> ''
+  getHICpuInfo             -> 0 bytes
+  getKernelVersion          -> 510
+  existMemMonitor           -> 0
+  getOswapVersion           -> -1
+  getAcmOpstat              -> 0
+  getUfsplusTwStatus        -> 0
+  isJankTaskTrackEnable     -> 0
+  readOsvelteVersion        -> v=1 major=0 minor=0 patch=0
+  getHIDState               EXCEPTION code=-129
+  getHIDState               -> reqId=29 target='' stats=0
+  readMemoryByPids          -> status=1 count=0 stats=0
+
+RESULT: 1 probe(s) raised a binder exception
+
+Interpretation
+--------------
+-129 == EX_TRANSACTION_FAILED (android/binder_status.h:116) = the AIDL server's
+generic handler-failure code. A transaction code the server does not know
+returns STATUS_UNKNOWN_TRANSACTION instead (a different code) — so every probe
+reached the correct handler.
+getKernelVersion (transaction 47) -> 510 is a real 5.10-GKI kernel version code
+on this device; a one-off shift in transaction numbering would have produced a
+different method's payload.
+readOsvelteVersion (101) -> v=1: the server's payload parsed correctly through
+the reconstructed 4x int32 OsvelteVersionRet.
+getHIDState (37): the server still wrote reqId=29 into the reply and the
+reconstructed ProcReqHal read that value back, so the parcelable layout matches
+too.

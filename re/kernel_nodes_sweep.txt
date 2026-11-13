@@ -1,0 +1,157 @@
+# Node existence sweep — device 102562537K104189 (Infinix GT 10 Pro / X6739)
+# Run 2026-10-27 08:30 WIB as root. 'exists' = test -e; 'read' = open+read succeeds,
+# which is what the HAL does with the node. ext4 templates substituted with the first
+# device in /proc/fs/ext4 (dm-11).
+
+## Fallback paths (this device's equivalent) — existence
+[FALLBACK] present=42 missing=0
+
+## Fallback paths — readability (open+read, what the HAL does)
+[FALLBACK] present=39 missing=3
+  MISSING: /proc/fs/ext4/
+  MISSING: /proc/uid_procstat/set
+  MISSING: /sys/fs/f2fs/dm-39
+
+## The 139 OPlus nodes the shipped HAL touches — existence
+[ALL_SHIPPED] present=18 missing=121
+  MISSING: /data/oplus/cpu/cpu_loading
+  MISSING: /data/vendor/cpu_info
+  MISSING: /data/vendor/trans_sched/cpu/clm_mux_switch
+  MISSING: /data/vendor/trans_sched/sched_assist/sched_scene
+  MISSING: /dev/acm
+  MISSING: /dev/block/by-name/oplusreserve3
+  MISSING: /dev/block/by-name/opporeserve3
+  MISSING: /dev/memcg/apps/uid_
+  MISSING: /dev/osvelte
+  MISSING: /proc/devinfo/ddr
+  MISSING: /proc/devinfo/emmc
+  MISSING: /proc/devinfo/emmc_version
+  MISSING: /proc/devinfo/ufs
+  MISSING: /proc/devinfo/ufsplus_status
+  MISSING: /proc/devinfo/ufs_version
+  MISSING: /proc/%d/smaps
+  MISSING: /proc/fg_info/fg_uids
+  MISSING: /proc/IoMonitor/daily
+  MISSING: /proc/IoMonitor/flow
+  MISSING: /proc/IoMonitor/uid_io_show
+  MISSING: /proc/jank_info/cpu_jank_info/bg_dstat_percent
+  MISSING: /proc/jank_info/cpu_jank_info/callstack
+  MISSING: /proc/jank_info/cpu_jank_info/clm_enable
+  MISSING: /proc/jank_info/cpu_jank_info/clm_highload_all
+  MISSING: /proc/jank_info/cpu_jank_info/clm_highload_grp
+  MISSING: /proc/jank_info/cpu_jank_info/clm_lowload_grp
+  MISSING: /proc/jank_info/cpu_jank_info/clm_report_threshold
+  MISSING: /proc/jank_info/cpu_jank_info/cpu_info
+  MISSING: /proc/jank_info/cpu_jank_info/cpu_info_sig
+  MISSING: /proc/jank_info/cpu_jank_info/cpu_load
+  MISSING: /proc/jank_info/cpu_jank_info/cpu_load32
+  MISSING: /proc/jank_info/cpu_jank_info/cpu_load32_scale
+  MISSING: /proc/jank_info/cpu_jank_info/fg_freqs_threshold
+  MISSING: /proc/jank_info/cpu_jank_info/load_indicator
+  MISSING: /proc/jank_info/cpu_jank_info/task_track
+  MISSING: /proc/jank_info/cpu_jank_info/task_track_enable
+  MISSING: /proc/jank_info/cpu_jank_info/version
+  MISSING: /proc/memory_monitor
+  MISSING: /proc/nandswap/fn_enable
+  MISSING: /proc/nandswap_vnd/
+  MISSING: /proc/oplus_healthinfo/alloc_wait
+  MISSING: /proc/oplus_healthinfo/dstate
+  MISSING: /proc/oplus_healthinfo/emcdrv_iowait
+  MISSING: /proc/oplus_healthinfo/fsync_wait
+  MISSING: /proc/oplus_healthinfo/ion_wait
+  MISSING: /proc/oplus_healthinfo/iowait
+  MISSING: /proc/oplus_healthinfo/iowait_hung
+  MISSING: /proc/oplus_healthinfo/kmalloc_debug
+  MISSING: /proc/oplus_healthinfo/kmalloc_debug_create
+  MISSING: /proc/oplus_healthinfo/kmalloc_debug_enable
+  MISSING: /proc/oplus_healthinfo/kmalloc_origin
+  MISSING: /proc/oplus_healthinfo/kmalloc_used
+  MISSING: /proc/oplus_healthinfo/kswapd_loading
+  MISSING: /proc/oplus_healthinfo/memleak_detect_thread
+  MISSING: /proc/oplus_healthinfo/process_reclaim_enable
+  MISSING: /proc/oplus_healthinfo/sched_latency
+  MISSING: /proc/oplus_healthinfo/scm_call
+  MISSING: /proc/oplus_healthinfo/ufs_feature
+  MISSING: /proc/oplus_healthinfo/va_feature
+  MISSING: /proc/oplus_healthinfo/vmalloc_debug
+  MISSING: /proc/oplus_healthinfo/vmalloc_debug_enable
+  MISSING: /proc/oplus_healthinfo/vmalloc_hash_cal
+  MISSING: /proc/oplus_healthinfo/vmalloc_used
+  MISSING: /proc/oplus_mem/memleak_detect/kmalloc_debug
+  MISSING: /proc/oplus_mem/memleak_detect/kmalloc_debug_create
+  MISSING: /proc/oplus_mem/memleak_detect/kmalloc_debug_enable
+  MISSING: /proc/oplus_mem/memleak_detect/kmalloc_origin
+  MISSING: /proc/oplus_mem/memleak_detect/kmalloc_used
+  MISSING: /proc/oplus_mem/memleak_detect/memleak_detect_thread
+  MISSING: /proc/oplus_mem/memleak_detect/stack_hash
+  MISSING: /proc/oplus_mem/memleak_detect/va_feature
+  MISSING: /proc/oplus_mem/memleak_detect/vmalloc_debug_enable
+  MISSING: /proc/oplus_mem/memleak_detect/vmalloc_hash_cal
+  MISSING: /proc/oplus_mem/memleak_detect/vmalloc_used
+  MISSING: /proc/oplus_mem/memory_monitor
+  MISSING: /proc/oplus_scheduler/sched_assist/audio/enable
+  MISSING: /proc/oplus_scheduler/sched_assist/im_flag
+  MISSING: /proc/oplus_scheduler/sched_assist/tpd_cmds
+  MISSING: /proc/oplus_scheduler/sched_assist/tpd_id
+  MISSING: /proc/oplus_scheduler/sched_assist/ux_task
+  MISSING: /proc/process_reclaim
+  MISSING: /proc/sgefreqinfo
+  MISSING: /proc/sgeinfo
+  MISSING: /proc/sys/kernel/cpu_multi_thread
+  MISSING: /proc/sys/kernel/frame_rate
+  MISSING: /proc/sys/kernel/sched_assist_scene
+  MISSING: /proc/sys/kernel/sched_impt_tgid
+  MISSING: /proc/sys/kernel/slide_boost_enabled
+  MISSING: /proc/sys/kernel/task_cpustats_enable
+  MISSING: /proc/sys/walt/frame_rate
+  MISSING: /proc/sys/walt/slide_boost_enabled
+  MISSING: /proc/task_cpustats
+  MISSING: /proc/task_info/task_cpustats/sgefreqinfo
+  MISSING: /proc/task_info/task_cpustats/sgeinfo
+  MISSING: /proc/task_info/task_cpustats/task_cpustats_enable
+  MISSING: /proc/task_info/task_load_info/monitor_status
+  MISSING: /proc/task_info/task_load_info/normalize_real_time
+  MISSING: /proc/task_info/task_load_info/normalize_running_time
+  MISSING: /proc/task_info/task_load_info/real_time
+  MISSING: /proc/task_info/task_load_info/running_time
+  MISSING: /proc/task_info/task_load_info/target_process
+  MISSING: /proc/task_info/task_sched_info/d_backtrace
+  MISSING: /proc/task_info/task_sched_info/d_convert
+  MISSING: /proc/task_info/task_sched_info/io_backtrace
+  MISSING: /proc/task_info/task_sched_info/limit_table
+  MISSING: /proc/task_info/task_sched_info/pids_set
+  MISSING: /proc/task_info/task_sched_info/sched_info_threshold
+  MISSING: /proc/task_info/task_sched_info/task_sched_info_enable
+  MISSING: /proc/task_info/task_sched_info/tids_set
+  MISSING: /proc/task_info/task_sched_info/version
+  MISSING: /proc/ufs_signalShow/record_upload
+  MISSING: /sys/block/zram0/hybridswap_enable
+  MISSING: /sys/bus/scsi/devices/0:0:0:
+  MISSING: /sys/devices/system/cpu/cpufreq/policy
+  MISSING: /sys/fs/cgroup/uid_
+  MISSING: /sys/module/damon_reclaim/parameters/wmarks_metric
+  MISSING: /sys/module/tpd/parameters/tpd_cmds
+  MISSING: /sys/module/tpd/parameters/tpd_enable
+  MISSING: /sys/module/tpd/parameters/tpd_id
+  MISSING: /sys/power/ddr/residency
+  MISSING: /sys/tmemory/
+
+## The OPlus nodes that exist
+  /data/vendor/trans_sched/sched_impt_task
+  /dev/block/by-name/userdata
+  /dev/memcg/
+  /proc/
+  /proc/fs/ext4/
+  /proc/version
+  /sys/block/zram0/
+  /sys/fs/f2fs/
+  /sys/module/damon_reclaim/parameters/aggr_interval
+  /sys/module/damon_reclaim/parameters/enabled
+  /sys/module/damon_reclaim/parameters/min_age
+  /sys/module/damon_reclaim/parameters/quota_ms
+  /sys/module/damon_reclaim/parameters/quota_reset_interval_ms
+  /sys/module/damon_reclaim/parameters/quota_sz
+  /sys/module/damon_reclaim/parameters/sample_interval
+  /sys/module/damon_reclaim/parameters/wmarks_high
+  /sys/module/damon_reclaim/parameters/wmarks_low
+  /sys/module/damon_reclaim/parameters/wmarks_mid

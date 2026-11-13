@@ -1,0 +1,4 @@
+# Generated AIDL C++ headers (from aidl/ via the C++ build) — regenerable.
+/build/
+# Rust build artifacts.
+/rust/target/

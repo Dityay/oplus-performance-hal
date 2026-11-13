@@ -1,0 +1,38 @@
+=== stop stock ===
+=== start reconstructed ===
+=== registered ===
+335	vendor.oplus.hardware.performance.IPerformance/default: [vendor.oplus.hardware.performance.IPerformance]
+=== PROBE (against the reconstructed HAL) ===
+OK: found vendor.oplus.hardware.performance.IPerformance/default
+  readVersion              -> 'Linux version 5.10.270-StargazerKernel-CelestialSphere (hoshimachi@suisei) (moonlight clang version 23.1.1, moonlight LLD 23.1.1) #1 SMP PREEMPT Mon Oct 19 16:55:13 WIB 2026
+'
+  getionwait               -> 'some avg10=1.10 avg60=0.87 avg300=0.24 total=974297
+full avg10=0.19 avg60=0.28 avg300=0.08 total=446478
+'
+  getHICpuInfo             -> 32 bytes
+  getKernelVersion          -> 510
+  existMemMonitor           -> 1
+  getOswapVersion           -> -1
+  getAcmOpstat              -> 0
+  getUfsplusTwStatus        -> 2
+  readJankCpuLoad           -> '[94 94 95 94], [99 99 99], [99]
+'
+  readJankCpuIndicator      -> '11.80 3.03 1.02 4/3100 4647
+'
+  readJankCpuInfo           -> 1896 bytes
+  readIOBacktrace           -> 377 bytes
+  getUfsSignalRecordUpload  -> 44604 bytes
+  readSchedInfoThreshold    -> 396460 bytes
+  isJankTaskTrackEnable     -> 0
+  readOsvelteVersion        -> v=1 major=0 minor=0 patch=0
+  getHIDState               -> reqId=0 target='some avg10=31.20 avg60=12.88 avg300=3.20 total=10047589
+' stats=0
+  readMemoryByPids          -> status=1 count=0 stats=0
+
+RESULT: all probes dispatched cleanly -> reconstructed interface is wire-compatible with the live stock HAL
+=== restore stock ===
+=== final state ===
+SVC=running
+335	vendor.oplus.hardware.performance.IPerformance/default: [vendor.oplus.hardware.performance.IPerformance]
+LEFTOVER=0
+PROBE_RC=0

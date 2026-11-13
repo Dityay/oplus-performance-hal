@@ -1,0 +1,45 @@
+// libc++ ABI override for the vendor-facing AIDL backend shared library.
+//
+// The NDK's libc++ uses the inline namespace `std::__ndk1`, but the ROM's
+// libc++.so (both /system/lib64 and /vendor/lib64) is the platform build and
+// exports `std::__1::...`. A shared library that is DT_NEEDED'd by a vendor
+// process must therefore be compiled with the platform's inline namespace, or
+// its libc++ symbols stay unresolved and the library cannot be loaded.
+//
+// This __config_site shadows the NDK's own one (it is included as
+// `#include <__config_site>`, so an earlier -I wins). Everything else is
+// identical to the NDK's copy; only the inline namespace differs.
+//
+// Used ONLY for the AIDL backend .so. The service binaries link libc++
+// statically and are therefore self-consistent either way.
+#ifndef _LIBCPP___CONFIG_SITE
+#define _LIBCPP___CONFIG_SITE
+
+#define _LIBCPP_ABI_VERSION 1
+#define _LIBCPP_ABI_NAMESPACE __1
+/* #undef _LIBCPP_ABI_FORCE_ITANIUM */
+/* #undef _LIBCPP_ABI_FORCE_MICROSOFT */
+/* #undef _LIBCPP_HAS_NO_THREADS */
+/* #undef _LIBCPP_HAS_NO_MONOTONIC_CLOCK */
+/* #undef _LIBCPP_HAS_NO_MUSL_LIBC */
+/* #undef _LIBCPP_HAS_THREAD_API_PTHREAD */
+/* #undef _LIBCPP_HAS_THREAD_API_EXTERNAL */
+/* #undef _LIBCPP_HAS_THREAD_API_WIN32 */
+/* #undef _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS */
+#define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
+/* #undef _LIBCPP_NO_VCRUNTIME */
+/* #undef _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION */
+/* #undef _LIBCPP_HAS_NO_FILESYSTEM */
+/* #undef _LIBCPP_HAS_NO_RANDOM_DEVICE */
+/* #undef _LIBCPP_HAS_NO_LOCALIZATION */
+/* #undef _LIBCPP_HAS_NO_WIDE_CHARACTERS */
+#define _LIBCPP_HAS_NO_STD_MODULES
+#define _LIBCPP_HAS_NO_TIME_ZONE_DATABASE
+/* #undef _LIBCPP_INSTRUMENTED_WITH_ASAN */
+#define _LIBCPP_PSTL_CPU_BACKEND_SERIAL
+#define _LIBCPP_PSTL_CPU_BACKEND_THREAD
+#define _LIBCPP_PSTL_CPU_BACKEND_WIN32
+#define _LIBCPP_PSTL_CPU_BACKEND_OPENMP
+#define _LIBCPP_HARDENING_MODE_DEFAULT 2
+
+#endif // _LIBCPP___CONFIG_SITE

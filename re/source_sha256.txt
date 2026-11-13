@@ -1,0 +1,2 @@
+e97ea4af456adbd65dbaec6fa048894ea6147c736649fc55f5ff98b3bbc0846b  erofs/vendor/bin/hw/vendor-oplus-hardware-performance-V1-service
+c5c442fac421e61c3b7d20819c1c0d50c42b1ea112256ddfec11c66c84b71ae2  erofs/vendor/lib64/vendor.oplus.hardware.performance-V1-ndk_platform.so
