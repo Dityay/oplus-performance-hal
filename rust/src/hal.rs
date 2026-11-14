@@ -266,7 +266,7 @@ fn dispatch(
 fn write_constant(plan: &'static Plan, out: *mut AParcel) -> Result<(), BinderStatus> {
     write_ok_status(out)?;
     match plan.method {
-        "writeDBacktrace" | "writeJankTaskTrackEnable" => Ok(()),
+        "writeDBacktrace" => Ok(()),
         // These return long in the AIDL; the stock service answers 0.
         "getAcmDirFlag" | "getAcmPkgFlag" => write_i64(out, 0),
         // No OPlus "oswap" concept on this kernel; the stock service reports -1.
