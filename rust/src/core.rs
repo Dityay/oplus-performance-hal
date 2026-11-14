@@ -8,22 +8,17 @@
 use crate::io_shim;
 use crate::nodeconv;
 use crate::nodes::Plan;
-use crate::parcelables::{stat_ret, ProcMemStat, ProcMemStatRet};
+use crate::parcelables::{osvelte_version, stat_ret, ProcMemStat, ProcMemStatRet};
 
 /// Field name -> the `smaps[_rollup]` key it is summed from. The order is the
 /// order fields are summed in, which matters only for readability.
-const SMAPS_FIELDS: [(&str, &str); 11] = [
-    ("rss", "Rss:"),
+const SMAPS_FIELDS: [(&str, &str); 6] = [
     ("pss", "Pss:"),
     ("swap", "Swap:"),
-    ("shared_clean", "Shared_Clean:"),
-    ("shared_dirty", "Shared_Dirty:"),
-    ("private_clean", "Private_Clean:"),
-    ("private_dirty", "Private_Dirty:"),
-    ("swap_pss", "SwapPss:"),
-    ("anon_rss", "Anonymous:"),
-    ("file_rss", "FilePmdMapped:"),
-    ("shmem_rss", "ShmemPmdMapped:"),
+    ("swap_rss", "SwapPss:"),
+    ("anon", "Anonymous:"),
+    ("file", "FilePmdMapped:"),
+    ("shmem", "ShmemPmdMapped:"),
 ];
 
 /// Sum one field of a smaps dump, in kB. `None` when the field is absent —
@@ -56,27 +51,31 @@ pub fn sum_smaps_field(text: &str, key: &str) -> Option<i64> {
 }
 
 /// Build a record from a `smaps`/`smaps_rollup` dump. Absent fields read 0.
-fn stat_from_smaps(pid: i32, comm: String, oom_adj: i8, dump: &str) -> ProcMemStat {
+fn stat_from_smaps(
+    pid: i32,
+    comm: String,
+    oom_score_adj: u16,
+    uid: i32,
+    ppid: i32,
+    dump: &str,
+) -> ProcMemStat {
     let mut stat = ProcMemStat {
         pid,
         comm,
-        oom_adj,
+        oom_score_adj,
+        uid,
+        ppid,
         ..Default::default()
     };
     for (field, key) in SMAPS_FIELDS {
         let value = sum_smaps_field(dump, key).unwrap_or(0).max(0) as i32;
         match field {
-            "rss" => stat.rss = value,
             "pss" => stat.pss = value,
             "swap" => stat.swap = value,
-            "shared_clean" => stat.shared_clean = value,
-            "shared_dirty" => stat.shared_dirty = value,
-            "private_clean" => stat.private_clean = value,
-            "private_dirty" => stat.private_dirty = value,
-            "swap_pss" => stat.swap_pss = value,
-            "anon_rss" => stat.anon_rss = value,
-            "file_rss" => stat.file_rss = value,
-            "shmem_rss" => stat.shmem_rss = value,
+            "swap_rss" => stat.swap_rss = value,
+            "anon" => stat.anon = value,
+            "file" => stat.file = value,
+            "shmem" => stat.shmem = value,
             _ => {}
         }
     }
@@ -89,12 +88,20 @@ fn read_process_comm(pid: i32) -> String {
         .to_string()
 }
 
-fn read_process_oom_adj(pid: i32) -> i8 {
+fn read_process_oom_score_adj(pid: i32) -> u16 {
     let text = io_shim::read(&format!("/proc/{}/oom_score_adj", pid));
     if text.is_empty() {
         return 0;
     }
-    nodeconv::parse_leading_int(&text).clamp(-128, 127) as i8
+    nodeconv::parse_leading_int(&text).clamp(0, u16::MAX as i32) as u16
+}
+
+fn read_process_uid_ppid(pid: i32) -> (i32, i32) {
+    let status = io_shim::read(&format!("/proc/{}/status", pid));
+    (
+        parse_status_uid(&status).unwrap_or(0),
+        parse_status_ppid(&status).unwrap_or(0),
+    )
 }
 
 /// `readMemoryByPids` — per-process memory.
@@ -114,22 +121,29 @@ pub fn read_memory_by_pids(pids: &[i32]) -> ProcMemStatRet {
             rollup
         };
         let comm = read_process_comm(pid);
-        let oom_adj = read_process_oom_adj(pid);
+        let oom_score_adj = read_process_oom_score_adj(pid);
+        let (uid, ppid) = read_process_uid_ppid(pid);
 
         if dump.is_empty() {
-            if let Some(stat) = stat_from_statm(pid, comm, oom_adj) {
+            if let Some(stat) = stat_from_statm(pid, comm, oom_score_adj, uid, ppid) {
                 stats.push(stat);
             }
             continue;
         }
-        stats.push(stat_from_smaps(pid, comm, oom_adj, &dump));
+        stats.push(stat_from_smaps(pid, comm, oom_score_adj, uid, ppid, &dump));
     }
     stat_ret(1, stats)
 }
 
 /// statm: size resident shared text lib data dt, in pages. PSS is not in statm,
 /// so it stays 0 — reporting an RSS-sized number as PSS would be a lie.
-fn stat_from_statm(pid: i32, comm: String, oom_adj: i8) -> Option<ProcMemStat> {
+fn stat_from_statm(
+    pid: i32,
+    comm: String,
+    oom_score_adj: u16,
+    uid: i32,
+    ppid: i32,
+) -> Option<ProcMemStat> {
     let text = io_shim::read(&format!("/proc/{}/statm", pid));
     if text.is_empty() {
         return None;
@@ -145,9 +159,11 @@ fn stat_from_statm(pid: i32, comm: String, oom_adj: i8) -> Option<ProcMemStat> {
     Some(ProcMemStat {
         pid,
         comm,
-        oom_adj,
-        rss: fields[1].saturating_mul(page_kib) as i32,
-        shared_clean: fields[2].saturating_mul(page_kib) as i32,
+        oom_score_adj,
+        uid,
+        ppid,
+        vss: fields[0].saturating_mul(page_kib) as i32,
+        file: fields[2].saturating_mul(page_kib) as i32,
         pss: 0,
         ..Default::default()
     })
@@ -173,10 +189,10 @@ pub fn read_memory_by_uids(uids: &[i32]) -> ProcMemStatRet {
             continue;
         };
         let rollup = io_shim::read(&format!("/proc/{}/smaps_rollup", name));
-        let rss = sum_smaps_field(&rollup, "Rss:").unwrap_or(0);
+        let anon = sum_smaps_field(&rollup, "Anonymous:").unwrap_or(0);
         let pss = sum_smaps_field(&rollup, "Pss:").unwrap_or(0);
-        if rss > 0 {
-            totals[slot] += rss;
+        if anon > 0 {
+            totals[slot] += anon;
         }
         if pss > 0 {
             psss[slot] += pss;
@@ -191,8 +207,9 @@ pub fn read_memory_by_uids(uids: &[i32]) -> ProcMemStatRet {
         }
         stats.push(ProcMemStat {
             pid: *uid,
+            uid: *uid,
             comm: "uid".to_string(),
-            rss: totals[slot] as i32,
+            anon: totals[slot] as i32,
             pss: psss[slot] as i32,
             ..Default::default()
         });
@@ -203,8 +220,16 @@ pub fn read_memory_by_uids(uids: &[i32]) -> ProcMemStatRet {
 /// The first value on a `Uid:` line — real uid, which is the one memcg
 /// accounting by uid has always meant.
 fn parse_status_uid(status: &str) -> Option<i32> {
+    parse_status_int(status, "Uid:")
+}
+
+fn parse_status_ppid(status: &str) -> Option<i32> {
+    parse_status_int(status, "PPid:")
+}
+
+fn parse_status_int(status: &str, prefix: &str) -> Option<i32> {
     for line in status.lines() {
-        let Some(rest) = line.strip_prefix("Uid:") else {
+        let Some(rest) = line.strip_prefix(prefix) else {
             continue;
         };
         let first = rest.split_whitespace().next()?;
@@ -230,13 +255,10 @@ pub fn run_special(plan: &Plan) -> Option<SpecialResult> {
         }
         "getF2fsMovedBlks" => Some(SpecialResult::String(nodeconv::read_dir_first(plan.nodes))),
         "readOsvelteVersion" => {
-            // The stock service reports version 1 with zeroed sub-fields.
-            Some(SpecialResult::Osvelte(crate::parcelables::OsvelteVersionRet {
-                version: 1,
-                major: 0,
-                minor: 0,
-                patch: 0,
-            }))
+            // Athena's memory releaser branches on major/minor to decide which
+            // release path it can take; 1.0 is the value the stock service
+            // reports on a kernel with no osvelte node.
+            Some(SpecialResult::Osvelte(osvelte_version(0, 1, 0)))
         }
         _ => None,
     }
@@ -292,15 +314,16 @@ ShmemPmdMapped:        4 kB
 
     #[test]
     fn stat_from_smaps_maps_every_field() {
-        let stat = stat_from_smaps(99, "app".into(), -5, ROLLUP);
-        assert_eq!(stat.rss, 120);
+        let stat = stat_from_smaps(99, "app".into(), 5, 1000, 1, ROLLUP);
+        assert_eq!(stat.oom_score_adj, 5);
+        assert_eq!(stat.uid, 1000);
+        assert_eq!(stat.ppid, 1);
         assert_eq!(stat.pss, 100);
         assert_eq!(stat.swap, 16);
-        assert_eq!(stat.shared_dirty, 5);
-        assert_eq!(stat.private_dirty, 65);
-        assert_eq!(stat.swap_pss, 8);
-        assert_eq!(stat.file_rss, 24);
-        assert_eq!(stat.shmem_rss, 4);
+        assert_eq!(stat.swap_rss, 8);
+        assert_eq!(stat.anon, 80);
+        assert_eq!(stat.file, 24);
+        assert_eq!(stat.shmem, 4);
     }
 
     #[test]
@@ -317,20 +340,23 @@ ShmemPmdMapped:        4 kB
     #[test]
     fn read_memory_by_pids_walks_real_proc_files() {
         let _g = io_shim::test_lock();
-        let root = "/tmp/perf_core_pids";
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/target/test_tmp/perf_core_pids");
         let _ = std::fs::remove_dir_all(root);
         std::fs::create_dir_all(format!("{}/proc/4242", root)).unwrap();
         io_shim::set_test_root(root);
         std::fs::write(format!("{}/proc/4242/smaps_rollup", root), ROLLUP).unwrap();
         std::fs::write(format!("{}/proc/4242/comm", root), "stress-ng\n").unwrap();
         std::fs::write(format!("{}/proc/4242/oom_score_adj", root), "-600\n").unwrap();
+        std::fs::write(format!("{}/proc/4242/status", root), "Uid:\t1000\nPPid:\t1\n").unwrap();
         let ret = read_memory_by_pids(&[4242]);
         assert_eq!(ret.status, 1);
-        assert_eq!(ret.count, 1);
-        assert_eq!(ret.stats[0].pid, 4242);
-        assert_eq!(ret.stats[0].comm, "stress-ng");
-        assert_eq!(ret.stats[0].oom_adj, -128); // -600 clamps to the char range
-        assert_eq!(ret.stats[0].rss, 120);
+        assert_eq!(ret.arr_ms.len(), 1);
+        assert_eq!(ret.arr_ms[0].pid, 4242);
+        assert_eq!(ret.arr_ms[0].comm, "stress-ng");
+        assert_eq!(ret.arr_ms[0].oom_score_adj, 0);
+        assert_eq!(ret.arr_ms[0].uid, 1000);
+        assert_eq!(ret.arr_ms[0].ppid, 1);
+        assert_eq!(ret.arr_ms[0].pss, 100);
         io_shim::clear_test_root();
         let _ = std::fs::remove_dir_all(root);
     }
@@ -338,32 +364,31 @@ ShmemPmdMapped:        4 kB
     #[test]
     fn an_unreadable_pid_is_skipped_not_fatal() {
         let _g = io_shim::test_lock();
-        let root = "/tmp/perf_core_pids_missing";
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/target/test_tmp/perf_core_pids_missing");
         let _ = std::fs::remove_dir_all(root);
         std::fs::create_dir_all(format!("{}/proc", root)).unwrap();
         io_shim::set_test_root(root);
         let ret = read_memory_by_pids(&[1]);
-        assert_eq!(ret.count, 0);
-        assert!(ret.stats.is_empty());
+        assert!(ret.arr_ms.is_empty());
         io_shim::clear_test_root();
         let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
-    fn statm_fallback_reports_rss_and_no_pss() {
+    fn statm_fallback_reports_vss_and_no_pss() {
         let _g = io_shim::test_lock();
-        let root = "/tmp/perf_core_statm";
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/target/test_tmp/perf_core_statm");
         let _ = std::fs::remove_dir_all(root);
         std::fs::create_dir_all(format!("{}/proc/777", root)).unwrap();
         io_shim::set_test_root(root);
-        // size resident shared text lib data dt — 100 pages resident, 10 shared
+        // size resident shared text lib data dt — 1000 pages vss, 10 shared
         std::fs::write(format!("{}/proc/777/statm", root), "1000 100 10 5 0 20 0\n").unwrap();
         let ret = read_memory_by_pids(&[777]);
-        assert_eq!(ret.count, 1);
+        assert_eq!(ret.arr_ms.len(), 1);
         let page_kib = io_shim::page_kib();
-        assert_eq!(ret.stats[0].rss, (100 * page_kib) as i32);
-        assert_eq!(ret.stats[0].shared_clean, (10 * page_kib) as i32);
-        assert_eq!(ret.stats[0].pss, 0);
+        assert_eq!(ret.arr_ms[0].vss, (1000 * page_kib) as i32);
+        assert_eq!(ret.arr_ms[0].file, (10 * page_kib) as i32);
+        assert_eq!(ret.arr_ms[0].pss, 0);
         io_shim::clear_test_root();
         let _ = std::fs::remove_dir_all(root);
     }
@@ -371,7 +396,7 @@ ShmemPmdMapped:        4 kB
     #[test]
     fn read_memory_by_uids_groups_processes_by_uid() {
         let _g = io_shim::test_lock();
-        let root = "/tmp/perf_core_uids";
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/target/test_tmp/perf_core_uids");
         let _ = std::fs::remove_dir_all(root);
         for pid in ["100", "101", "200"] {
             std::fs::create_dir_all(format!("{}/proc/{}", root, pid)).unwrap();
@@ -392,20 +417,32 @@ ShmemPmdMapped:        4 kB
             "Name:\tc\nUid:\t10999\t10999\t10999\t10999\n",
         )
         .unwrap();
-        std::fs::write(format!("{}/proc/100/smaps_rollup", root), "Rss: 10 kB\nPss: 8 kB\n").unwrap();
-        std::fs::write(format!("{}/proc/101/smaps_rollup", root), "Rss: 20 kB\nPss: 16 kB\n").unwrap();
-        std::fs::write(format!("{}/proc/200/smaps_rollup", root), "Rss: 40 kB\nPss: 32 kB\n").unwrap();
+        std::fs::write(
+            format!("{}/proc/100/smaps_rollup", root),
+            "Anonymous: 10 kB\nPss: 8 kB\n",
+        )
+        .unwrap();
+        std::fs::write(
+            format!("{}/proc/101/smaps_rollup", root),
+            "Anonymous: 20 kB\nPss: 16 kB\n",
+        )
+        .unwrap();
+        std::fs::write(
+            format!("{}/proc/200/smaps_rollup", root),
+            "Anonymous: 40 kB\nPss: 32 kB\n",
+        )
+        .unwrap();
         // a non-numeric /proc entry must be ignored
         std::fs::create_dir_all(format!("{}/proc/sys", root)).unwrap();
 
         let ret = read_memory_by_uids(&[10123, 10999, 55555]);
-        assert_eq!(ret.count, 2, "the absent uid must not produce a record");
-        assert_eq!(ret.stats[0].pid, 10123);
-        assert_eq!(ret.stats[0].comm, "uid");
-        assert_eq!(ret.stats[0].rss, 30);
-        assert_eq!(ret.stats[0].pss, 24);
-        assert_eq!(ret.stats[1].pid, 10999);
-        assert_eq!(ret.stats[1].rss, 40);
+        assert_eq!(ret.arr_ms.len(), 2, "the absent uid must not produce a record");
+        assert_eq!(ret.arr_ms[0].pid, 10123);
+        assert_eq!(ret.arr_ms[0].comm, "uid");
+        assert_eq!(ret.arr_ms[0].anon, 30);
+        assert_eq!(ret.arr_ms[0].pss, 24);
+        assert_eq!(ret.arr_ms[1].pid, 10999);
+        assert_eq!(ret.arr_ms[1].anon, 40);
 
         io_shim::clear_test_root();
         let _ = std::fs::remove_dir_all(root);
@@ -414,6 +451,6 @@ ShmemPmdMapped:        4 kB
     #[test]
     fn read_memory_by_uids_of_nothing_returns_nothing() {
         let ret = read_memory_by_uids(&[]);
-        assert_eq!(ret.count, 0);
+        assert!(ret.arr_ms.is_empty());
     }
 }

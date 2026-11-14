@@ -245,7 +245,7 @@ fn dispatch(
         Op::ReadStruct => {
             let target = nodeconv::read_first(plan.nodes);
             write_ok_status(out_parcel)?;
-            write_proc_req_hal(out_parcel, &empty_req(0, target))
+            write_proc_req_hal(out_parcel, &empty_req(target))
         }
         Op::Write => {
             let value = string_of(&args);
@@ -266,6 +266,7 @@ fn dispatch(
 fn write_constant(plan: &'static Plan, out: *mut AParcel) -> Result<(), BinderStatus> {
     write_ok_status(out)?;
     match plan.method {
+        "writeDBacktrace" | "writeJankTaskTrackEnable" => Ok(()),
         // These return long in the AIDL; the stock service answers 0.
         "getAcmDirFlag" | "getAcmPkgFlag" => write_i64(out, 0),
         // No OPlus "oswap" concept on this kernel; the stock service reports -1.

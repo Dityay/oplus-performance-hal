@@ -27,7 +27,9 @@ use std::ffi::{c_char, c_void, CString};
 use std::os::raw::c_int;
 use std::ptr;
 
-use perf_service::parcelables::{OsvelteVersionRet, ProcMemStat, ProcMemStatRet, ProcReqHal};
+use perf_service::parcelables::{
+    OsvelteVersionRet, ProcMemStat, ProcMemStatRet, ProcReqHal, ProcReqItemHal,
+};
 
 #[repr(C)]
 pub struct AIBinder {
@@ -299,61 +301,84 @@ pub fn read_i32_array(in_parcel: *const AParcel) -> Result<Vec<i32>, BinderStatu
 // The count and each element's fields are still written with the real AParcel
 // calls, so the byte layout is produced by libbinder, not guessed.
 
-pub fn write_proc_req_hal(out: *mut AParcel, value: &ProcReqHal) -> Result<(), BinderStatus> {
-    write_i32(out, value.req_id)?;
-    write_string(out, &value.target)?;
-    write_stat_array(out, &value.stats)
+pub fn write_parcelable(
+    out: *mut AParcel,
+    fields: impl FnOnce(*mut AParcel) -> Result<(), BinderStatus>,
+) -> Result<(), BinderStatus> {
+    // AIDL writes a parcelable as a non-null marker, then the body size in
+    // bytes (counting the size field itself), then the fields. The client reads
+    // the size first and rejects a body that does not declare it --
+    // BadParcelableException, which crashes a system_server caller.
+    write_i32(out, 1)?;
+    let size_at = unsafe { AParcel_getDataPosition(out) };
+    write_i32(out, 0)?;
+    fields(out)?;
+    let size = unsafe { AParcel_getDataPosition(out) } - size_at;
+    ok_or(unsafe { AParcel_setDataPosition(out, size_at) })?;
+    write_i32(out, size)?;
+    ok_or(unsafe { AParcel_setDataPosition(out, size_at + size) })
 }
 
-pub fn write_proc_mem_stat_ret(
-    out: *mut AParcel,
-    value: &ProcMemStatRet,
-) -> Result<(), BinderStatus> {
-    write_i32(out, value.status)?;
-    write_i32(out, value.count)?;
-    write_stat_array(out, &value.stats)
+pub fn write_proc_req_item_hal(out: *mut AParcel, item: &ProcReqItemHal) -> Result<(), BinderStatus> {
+    write_parcelable(out, |out| {
+        write_string(out, &item.key)?;
+        write_string(out, &item.label)?;
+        write_i32(out, item.upload_type)
+    })
+}
+
+pub fn write_proc_mem_stat(out: *mut AParcel, stat: &ProcMemStat) -> Result<(), BinderStatus> {
+    write_parcelable(out, |out| {
+        write_string(out, &stat.comm)?;
+        write_bool(out, stat.is_32bit)?;
+        write_i32(out, stat.oom_score_adj as i32)?;
+        write_i32(out, stat.nr_fds)?;
+        write_i32(out, stat.uid)?;
+        write_i32(out, stat.pid)?;
+        write_i32(out, stat.ppid)?;
+        write_i32(out, stat.anon)?;
+        write_i32(out, stat.file)?;
+        write_i32(out, stat.shmem)?;
+        write_i32(out, stat.swap)?;
+        write_i32(out, stat.vss)?;
+        write_i32(out, stat.pss)?;
+        write_i32(out, stat.swap_rss)?;
+        write_i32(out, stat.javaheap)?;
+        write_i32(out, stat.nativeheap)?;
+        write_i32(out, stat.ashmem)?;
+        write_i32(out, stat.dmabuf)?;
+        write_i32(out, stat.gpu)
+    })
+}
+
+pub fn write_proc_req_hal(out: *mut AParcel, value: &ProcReqHal) -> Result<(), BinderStatus> {
+    write_parcelable(out, |out| {
+        write_string(out, &value.proc)?;
+        write_i32(out, value.items.len() as i32)?;
+        for item in &value.items {
+            write_proc_req_item_hal(out, item)?;
+        }
+        Ok(())
+    })
+}
+
+pub fn write_proc_mem_stat_ret(out: *mut AParcel, value: &ProcMemStatRet) -> Result<(), BinderStatus> {
+    write_parcelable(out, |out| {
+        write_i32(out, value.status)?;
+        write_i32(out, value.arr_ms.len() as i32)?;
+        for stat in &value.arr_ms {
+            write_proc_mem_stat(out, stat)?;
+        }
+        Ok(())
+    })
 }
 
 pub fn write_osvelte(out: *mut AParcel, value: &OsvelteVersionRet) -> Result<(), BinderStatus> {
-    write_i32(out, value.version)?;
-    write_i32(out, value.major)?;
-    write_i32(out, value.minor)?;
-    write_i32(out, value.patch)
-}
-
-fn write_stat_array(out: *mut AParcel, stats: &[ProcMemStat]) -> Result<(), BinderStatus> {
-    write_i32(out, stats.len() as i32)?;
-    for stat in stats {
-        write_proc_mem_stat(out, stat)?;
-    }
-    Ok(())
-}
-
-/// `ProcMemStat` field order. The trailing `reserved` is nullable; AIDL writes
-/// a nullable primitive as value + present-flag, which is why the last two
-/// writes are an int and a bool.
-pub fn write_proc_mem_stat(out: *mut AParcel, stat: &ProcMemStat) -> Result<(), BinderStatus> {
-    write_i32(out, stat.pid)?;
-    write_string(out, &stat.comm)?;
-    write_bool(out, stat.is_foreground)?;
-    write_byte(out, stat.oom_adj)?;
-    write_i32(out, stat.rss)?;
-    write_i32(out, stat.swap)?;
-    write_i32(out, stat.pss)?;
-    write_i32(out, stat.uss)?;
-    write_i32(out, stat.shared_clean)?;
-    write_i32(out, stat.shared_dirty)?;
-    write_i32(out, stat.private_clean)?;
-    write_i32(out, stat.private_dirty)?;
-    write_i32(out, stat.swap_pss)?;
-    write_i32(out, stat.anon_rss)?;
-    write_i32(out, stat.file_rss)?;
-    write_i32(out, stat.shmem_rss)?;
-    write_i32(out, stat.gpu)?;
-    write_i32(out, stat.kernel)?;
-    write_i32(out, stat.dmabuf)?;
-    write_i32(out, stat.reserved.unwrap_or(0))?;
-    write_bool(out, stat.reserved.is_some())
+    write_parcelable(out, |out| {
+        write_i32(out, value.status)?;
+        write_i32(out, value.major)?;
+        write_i32(out, value.minor)
+    })
 }
 
 fn ok_or(rc: BinderStatus) -> Result<(), BinderStatus> {

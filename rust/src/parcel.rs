@@ -46,6 +46,32 @@ impl Parcel {
         self.bytes.len().saturating_sub(self.pos)
     }
 
+    /// Move the read cursor. A versioned parcelable declares its own end, and
+    /// skipping to it keeps an older parser compatible with a newer body.
+    pub fn seek(&mut self, at: usize) -> Option<()> {
+        if at > self.bytes.len() {
+            return None;
+        }
+        self.pos = at;
+        Some(())
+    }
+
+    /// Current read cursor, used to measure a versioned parcelable's end.
+    pub fn pos(&self) -> usize {
+        self.pos
+    }
+
+    /// Current write cursor, used to measure a versioned parcelable's size.
+    pub fn write_pos(&self) -> usize {
+        self.bytes.len()
+    }
+
+    /// Overwrite an i32 already written at `at`. AIDL parcelables lead with a
+    /// size field that is only known once the fields are on the wire.
+    pub fn patch_i32_at(&mut self, at: usize, value: i32) {
+        self.bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
     pub fn write_i32(&mut self, value: i32) {
         self.bytes.extend_from_slice(&value.to_le_bytes());
     }
