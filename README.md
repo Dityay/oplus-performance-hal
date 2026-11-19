@@ -84,3 +84,7 @@ ROM_TREE=/path/to/rom bash scripts/stage_vendor.sh
 ```
 
 The script copies the built binary to `vendor/bin/hw/vendor-oplus-hardware-performance-V1-service` under `ROM_TREE`. The existing init rc and VINTF fragment already reference that path. Staging does not build an image, flash a device, or regenerate file-context configuration.
+
+## Credits
+
+- Original repository: [Xia-s-Projekt/oplus-performance-hal](https://github.com/Xia-s-Projekt/oplus-performance-hal)

@@ -371,7 +371,7 @@ static void fill_struct(const char* const* cands,
 }
 
 ::ndk::ScopedAStatus PerfHal::getDevinfoUfsInfo(std::string* _aidl_return) {
-    static const char* const c[] = {"/proc/devinfo/ufs", "/proc/ufs_debug", nullptr};
+    static const char* const c[] = {"/proc/devinfo/ufs", "/sys/block/sda/device/model", "/proc/ufs_debug", nullptr};
     *_aidl_return = read_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
@@ -383,7 +383,7 @@ static void fill_struct(const char* const* cands,
 }
 
 ::ndk::ScopedAStatus PerfHal::getDevinfoUfsVersionInfo(std::string* _aidl_return) {
-    static const char* const c[] = {"/proc/devinfo/ufs_version", "/proc/ufs_debug", nullptr};
+    static const char* const c[] = {"/proc/devinfo/ufs_version", "/sys/devices/platform/soc/1d84000.ufshc/device_descriptor/specification_version", "/proc/ufs_debug", nullptr};
     *_aidl_return = read_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
@@ -521,19 +521,19 @@ static void fill_struct(const char* const* cands,
 }
 
 ::ndk::ScopedAStatus PerfHal::getUfsSignalRecordUpload(std::string* _aidl_return) {
-    static const char* const c[] = {"/proc/ufs_signalShow/record_upload", "/proc/ufs_debug", nullptr};
+    static const char* const c[] = {"/proc/ufs_signalShow/record_upload", "/sys/devices/platform/soc/1d84000.ufshc/device_descriptor/ufs_features", "/proc/ufs_debug", nullptr};
     *_aidl_return = read_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
 
 ::ndk::ScopedAStatus PerfHal::getUfsplusHpbStatus(int32_t* _aidl_return) {
-    static const char* const c[] = {"/proc/devinfo/ufsplus_status", "/proc/ufs_debug", nullptr};
+    static const char* const c[] = {"/proc/devinfo/ufsplus_status", "/sys/devices/platform/soc/1d84000.ufshc/wb_on", "/proc/ufs_debug", nullptr};
     *_aidl_return = read_int_scan_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
 
 ::ndk::ScopedAStatus PerfHal::getUfsplusTwStatus(int32_t* _aidl_return) {
-    static const char* const c[] = {"/proc/devinfo/ufsplus_status", "/proc/ufs_debug", nullptr};
+    static const char* const c[] = {"/proc/devinfo/ufsplus_status", "/sys/devices/platform/soc/1d84000.ufshc/wb_on", "/proc/ufs_debug", nullptr};
     *_aidl_return = read_int_scan_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
@@ -948,19 +948,19 @@ static void fill_struct(const char* const* cands,
 }
 
 ::ndk::ScopedAStatus PerfHal::readSgeFreqInfo(std::string* _aidl_return) {
-    static const char* const c[] = {"/proc/sgefreqinfo", "/sys/class/devfreq/13000000.mali/cur_freq", "/sys/kernel/ged/hal/current_freqency", "/proc/gpufreqv2/gpufreq_status", nullptr};
+    static const char* const c[] = {"/proc/sgefreqinfo", "/sys/class/kgsl/kgsl-3d0/clock_mhz", "/sys/class/kgsl/kgsl-3d0/gpuclk", "/sys/class/devfreq/13000000.mali/cur_freq", "/sys/kernel/ged/hal/current_freqency", "/proc/gpufreqv2/gpufreq_status", nullptr};
     *_aidl_return = read_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
 
 ::ndk::ScopedAStatus PerfHal::readSgeInfo(std::string* _aidl_return) {
-    static const char* const c[] = {"/proc/sgeinfo", "/proc/mtk_mali/utilization", "/sys/kernel/ged/hal/gpu_utilization", "/proc/mtk_mali/gpu_memory", nullptr};
+    static const char* const c[] = {"/proc/sgeinfo", "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage", "/sys/class/kgsl/kgsl-3d0/gpubusy", "/proc/mtk_mali/utilization", "/sys/kernel/ged/hal/gpu_utilization", "/proc/mtk_mali/gpu_memory", nullptr};
     *_aidl_return = read_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
 
 ::ndk::ScopedAStatus PerfHal::readStorageFeature(const std::string& in_arg0, const std::string& in_arg1, const std::string& in_arg2, std::string* _aidl_return) {
-    static const char* const c[] = {"/proc/fs/ext4/dm-11/mb_groups", "/sys/fs/f2fs/dm-39", nullptr};
+    static const char* const c[] = {"/proc/fs/ext4/dm-11/mb_groups", "/sys/fs/f2fs/dm-48/lifetime_write_kbytes", "/sys/fs/f2fs/dm-39", nullptr};
     *_aidl_return = read_first(c);
     return ::ndk::ScopedAStatus::ok();
 }
@@ -1078,13 +1078,13 @@ static void fill_struct(const char* const* cands,
 }
 
 ::ndk::ScopedAStatus PerfHal::setSchedAssistScene(const std::string& in_arg0) {
-    static const char* const c[] = {"/proc/sys/kernel/sched_assist_scene", "/proc/game_mode", nullptr};
+    static const char* const c[] = {"/proc/sys/kernel/sched_assist_scene", "/proc/sys/kernel/sched_util_clamp_min", "/proc/game_mode", nullptr};
     write_first(c, in_arg0.c_str());
     return ::ndk::ScopedAStatus::ok();
 }
 
 ::ndk::ScopedAStatus PerfHal::setSlideboost(const std::string& in_arg0) {
-    static const char* const c[] = {"/proc/sys/kernel/slide_boost_enabled", "/proc/game_state", nullptr};
+    static const char* const c[] = {"/proc/sys/kernel/slide_boost_enabled", "/proc/sys/kernel/sched_util_clamp_min", "/proc/game_state", nullptr};
     write_first(c, in_arg0.c_str());
     return ::ndk::ScopedAStatus::ok();
 }
@@ -1201,7 +1201,7 @@ static void fill_struct(const char* const* cands,
 }
 
 ::ndk::ScopedAStatus PerfHal::writeStorageFeature(const std::string& in_arg0, const std::string& in_arg1, const std::string& in_arg2, const std::string& in_arg3, int32_t* _aidl_return) {
-    static const char* const c[] = {"/proc/fs/ext4/dm-11/mb_groups", "/sys/fs/f2fs/dm-39", nullptr};
+    static const char* const c[] = {"/proc/fs/ext4/dm-11/mb_groups", "/sys/fs/f2fs/dm-48/lifetime_write_kbytes", "/sys/fs/f2fs/dm-39", nullptr};
     *_aidl_return = read_int_first(c);
     return ::ndk::ScopedAStatus::ok();
 }

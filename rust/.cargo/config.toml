@@ -2,7 +2,7 @@
 # linker. The NDK's libbinder_ndk.so / liblog.so stubs live in the sysroot for
 # API 35.
 [target.aarch64-linux-android]
-linker = "/opt/android-sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
+linker = "/home/butterscotch/android-ndk-r27d/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
 rustflags = [
     "-C", "link-arg=-Wl,--no-undefined",
     "-C", "link-arg=-Wl,-z,relro,-z,now",

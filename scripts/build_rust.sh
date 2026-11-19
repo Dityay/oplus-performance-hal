@@ -12,12 +12,15 @@ W=$(cd "$(dirname "$0")/.." && pwd)
 # resolves libbinder_ndk.so through a local symlink so no absolute path is baked
 # into the repository.
 ROM_TREE="${ROM_TREE:-$W/../vendor-tree}"
-NDK="${ANDROID_NDK_HOME:-${NDK:-/opt/android-sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64}}"
-BINDER="$ROM_TREE/system/system/lib64/libbinder_ndk.so"
-[[ -f "$BINDER" ]] || BINDER="$ROM_TREE/vendor/lib64/libbinder_ndk.so"
-[[ -f "$BINDER" ]] || { echo "libbinder_ndk.so not found under ROM_TREE=$ROM_TREE" >&2; exit 1; }
-mkdir -p "$W/vendor-libs"
-ln -sf "$BINDER" "$W/vendor-libs/libbinder_ndk.so"
+NDK="${ANDROID_NDK_HOME:-${NDK:-/home/butterscotch/android-ndk-r27d/toolchains/llvm/prebuilt/linux-x86_64}}"
+BINDER="$W/vendor-libs/libbinder_ndk.so"
+if [[ ! -f "$BINDER" ]]; then
+    BINDER="$ROM_TREE/system/system/lib64/libbinder_ndk.so"
+    [[ -f "$BINDER" ]] || BINDER="$ROM_TREE/vendor/lib64/libbinder_ndk.so"
+    [[ -f "$BINDER" ]] || { echo "libbinder_ndk.so not found under ROM_TREE=$ROM_TREE" >&2; exit 1; }
+    mkdir -p "$W/vendor-libs"
+    ln -sf "$BINDER" "$W/vendor-libs/libbinder_ndk.so"
+fi
 
 cd "$W/rust"
 
