@@ -21,7 +21,7 @@ set -euo pipefail
 
 HERE="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
 CRATE="$HERE"
-ROM_TREE="${ROM_TREE:-$HERE/../../../erofs}"
+ROM_TREE="${ROM_TREE:-$HERE/../vendor-tree}"
 AIDL_BIN="${AIDL_BIN:-/opt/android-sdk/build-tools/34.0.0/aidl}"
 SHIPPED_LIB="$ROM_TREE/vendor/lib64/vendor.oplus.hardware.performance-V1-ndk_platform.so"
 AIDLROOT="$CRATE/aidl"
@@ -90,7 +90,7 @@ PY
 # --- 3. cross-check ------------------------------------------------------------
 if diff -u "$WORK/shipped.txt" "$WORK/recon.txt" > "$WORK/diff.txt"; then
     echo -e "${GRN}PASS${NC} — transaction order identical for all $(wc -l < "$WORK/shipped.txt") methods"
-    echo "       (code<TAB>method) — see $CRATE/re/method_order.txt"
+    echo "       (code<TAB>method)"
     exit 0
 fi
 echo -e "${RED}FAIL — transaction order differs${NC}"

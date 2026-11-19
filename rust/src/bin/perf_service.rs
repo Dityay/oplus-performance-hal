@@ -1,7 +1,7 @@
 // OPlus Performance HAL service entry point (Rust port).
 //
-// Startup recovered from the shipped binary and its init rc
-// (erofs/vendor/etc/init/vendor-oplus-hardware-performance-V1-service.rc):
+// Startup contract from the init rc
+// (vendor/etc/init/vendor-oplus-hardware-performance-V1-service.rc):
 //
 //   service oplus.performance.hal.service-1-0
 //       /vendor/bin/hw/vendor-oplus-hardware-performance-V1-service

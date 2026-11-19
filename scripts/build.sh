@@ -12,7 +12,7 @@ set -euo pipefail
 
 HERE="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
 CRATE="$HERE"
-ROM_TREE="${ROM_TREE:-$HERE/../../../erofs}"
+ROM_TREE="${ROM_TREE:-$HERE/../vendor-tree}"
 AIDL_BIN="${AIDL_BIN:-/opt/android-sdk/build-tools/34.0.0/aidl}"
 NDK="${ANDROID_NDK_HOME:-/opt/android-sdk/ndk/27.3.13750724}"
 
@@ -33,7 +33,7 @@ TC="$(dirname "$NDK")/prebuilt/linux-x86_64"
 SYSROOT="$NDK/sysroot/usr/include"
 # binder_manager.h (AServiceManager_addService) is a platform NDK header, not in
 # the NDK sysroot; pull it from the AOSP headers snapshot on this host.
-AOSP_HEADERS="${AOSP_HEADERS:-/mnt/project/Misc/aosp_headers/api36/frameworks/native/libs/binder/ndk}"
+AOSP_HEADERS="${AOSP_HEADERS:-$HERE/../aosp-headers}"
 INCLUDE_PLATFORM=""
 for c in "$AOSP_HEADERS/include_platform" "$AOSP_HEADERS/include_ndk"; do
     [[ -f "$c/android/binder_manager.h" ]] && INCLUDE_PLATFORM="$c" && break
@@ -159,7 +159,7 @@ readelf -d "$SHLIB" | grep NEEDED | sed 's/^/  /'
 
 # --- 5b. 32-bit variant of the backend ---------------------------------------
 # Two 32-bit system libraries import IPerformance::descriptor and
-# IPerformance::fromBinder from this backend (erofs/system/system/lib/
+# IPerformance::fromBinder from this backend ($ROM_TREE/system/system/lib/
 # oplus_performance_shared.so and liboplusvideoboostservice.so), so the
 # 32-bit copy in vendor/lib/ must exist and export the same names.
 SHLIB32="$BUILD/32/$SHLIB_SONAME"

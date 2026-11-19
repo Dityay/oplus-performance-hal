@@ -1,4 +1,16 @@
-# Generated AIDL C++ headers (from aidl/ via the C++ build) — regenerable.
+# Generated AIDL C++ headers and build outputs (regenerable from aidl/ and src/).
 /build/
 # Rust build artifacts.
 /rust/target/
+# Local scratch space.
+/work/
+# Symlinks to platform libraries supplied by the ROM/vendor tree.
+/vendor-libs/
+# Disassembly dumps, probe logs and scratch captures.
+/re/
+# Compiler and binary artifacts.
+*.o
+*.so
+*.a
+/ipc_probe
+/ipc_probe_full

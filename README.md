@@ -1,167 +1,77 @@
-# OplusPerf
+# OPlusPerf
 
-Rust rewrite of the OPlus Performance HAL
-(`vendor.oplus.hardware.performance.IPerformance`) for the X6739 / MT6893. No
-C/C++ source, no prebuilt C libraries: the service is a single Rust binary
-speaking the binder NDK C API directly and emitting the same AIDL wire format
-the shipped backend does.
+A Rust implementation of the OPlus `vendor.oplus.hardware.performance` AIDL HAL (V1, `IPerformance/default`).
 
-The C++ tree it replaces is preserved in this repo under `src/` and `re/` as
-the reconstruction record; the Rust port lives under `rust/`.
+## What the service does
 
-## What the service is
+The service registers a VINTF-stable binder interface that exposes the platform's performance and diagnostics nodes to the framework. The interface is wide and mostly shallow:
 
-A 169-method AIDL interface, `@VintfStability`, over the kernel's performance
-and diagnostics nodes. The interface is wide but shallow:
+- readers returning a `String` with a node dump, a value, or a version banner;
+- readers returning an `int` with an enable flag or status code;
+- writers that push a string or an integer into a knob;
+- two struct-returning memory readers (`readMemoryByPids`, `readMemoryByUids`) that report per-process and per-uid memory usage from `/proc`;
+- health-info, app-compaction and memory groups that return parcelable records.
 
-- ~90 readers returning a `String` (a `/proc` dump, a node value, a version banner)
-- ~20 readers returning an `int` (an enable flag, a status code)
-- ~25 writers pushing a string or an int into a knob
-- 2 struct-returning readers (`readMemoryByPids` / `readMemoryByUids`)
-- the rest are the `getHI*` health-info readers returning `ProcReqHal`, the
-  `Acm*` app-compact methods (constant on this kernel), and the `Tmemory*`
-  group
+Each method keeps its OPlus node as the primary candidate and walks a list of fallback nodes until one answers. Reads are bounded so a large node dump still fits in a binder reply.
 
-The porting problem is the same one the other HALs face: the backend was
-written for a Qualcomm SM8xxx kernel. MT6893 does not publish
-`/proc/jank_info/cpu_jank_info/*`, `/proc/oplus_healthinfo/*`,
-`/proc/task_info/*` or `/dev/memcg/apps`. Every method keeps its original OPlus
-node as the primary candidate and adds this device's MTK/Transsion equivalent
-as a fallback; the first candidate that answers wins. That makes the HAL
-faithful on an OPlus kernel and useful on the MT6893.
-
-`re/kernel_nodes_equiv.md` is the per-method evidence: every MTK path was
-confirmed present on the device before it was written down.
-
-## Layout
+## Repository layout
 
 ```
-aidl/vendor/oplus/hardware/performance/     the AIDL surface (169 methods, 4 parcelables)
+aidl/vendor/oplus/hardware/performance/   AIDL interface and parcelables
 rust/src/lib.rs                 crate root
-rust/src/nodes.rs               NODE_TABLE: one Plan per AIDL method, in transaction order
-rust/src/nodeconv.rs            the candidate-walk operations (read_first, write_first, ...)
-rust/src/core.rs                readMemoryByPids / readMemoryByUids, smaps parsing, specials
-rust/src/parcel.rs              a host byte-level parcel codec for the round-trip tests
-rust/src/parcelables.rs         the four AIDL parcelables and their serialisers
-rust/src/io_shim.rs             absolute-path I/O with a test-root override
-rust/src/wire.rs                libbinder_ndk FFI + AParcel helpers
-rust/src/hal.rs                 onTransact: the arg shapes and the generic plan executor
-rust/src/bin/perf_service.rs    main(): thread pool, addService, joinThreadPool
-scripts/build_rust.sh           host tests + aarch64 cross-build + identity verification
-scripts/stage_vendor.sh         copy artifact into the staging tree (no repack)
-re/                             the reconstruction record: disassembly, node sweeps,
-                                the C++ source it replaces, and the equivalences
+rust/src/nodes.rs               node plan table, in AIDL declaration order
+rust/src/nodeconv.rs            candidate-walk read/write helpers
+rust/src/core.rs                memory-stat walks and smaps parsing
+rust/src/parcel.rs              byte-level parcel codec used by the host tests
+rust/src/parcelables.rs         AIDL parcelables and their serialisers
+rust/src/io_shim.rs             path I/O with a test-root override
+rust/src/wire.rs                libbinder_ndk FFI and AParcel helpers
+rust/src/hal.rs                 onTransact argument decoding and plan execution
+rust/src/bin/perf_service.rs    service entry point: thread pool and addService
+src/                            reference C++ implementation of the same interface
+platform_abi/                   platform libc++ ABI override header
+scripts/                        build, verification and staging helpers
+tools/                          IPC probe sources
 ```
 
-## The single-source-of-truth principle
+## AIDL
 
-Two hand-maintained surfaces have to agree with the AIDL file: the node table
-(`nodes.rs`, transaction order) and the in-parameter shapes (`hal.rs::read_args`).
-Both are checked against the AIDL by tests rather than by review:
+The interface and its four parcelables live under `aidl/vendor/oplus/hardware/performance/`. It is `@VintfStability`, version 1, with a frozen-interface hash passed to `aidl` by the build scripts. Transaction codes follow declaration order, so the order of declarations in `IPerformance.aidl` is part of the wire contract and must not be shuffled.
 
-- `nodes::tests::table_matches_the_aidl_declaration_order_exactly` re-parses
-  the AIDL and compares all 169 names in order;
-- `hal::tests::arg_arm_cover_exactly_matches_the_aidl_signatures` re-parses the
-  AIDL signatures and checks that the union of `read_args` arms is exactly the
-  set of methods that carry in-parameters — in both directions.
+Two tests re-parse the AIDL at test time and check that the node table and the argument-decoding arms still match it exactly.
 
-That second test caught two real mistakes while it was being written: code 82
-(`readIomonitorInfo`) missing from every arm, and code 33 wrongly listed as
-taking a `String`. Both would have been silent wire corruption, and neither
-was visible by reading the code.
+## Reference C++ tree
 
-Transaction codes are 1..=169 in AIDL declaration order and **must not be
-reordered**: AIDL assigns codes by declaration order, so a shuffle breaks wire
-compatibility with the shipped HAL and every prebuilt client.
+`src/` holds the C++ implementation of the interface (`PerfHal.cpp`, `PerfHal.h`, `main.cpp`). `Android.bp` builds it with Soong as `vendor-oplus-hardware-performance-V1-service` and wires up the init rc and VINTF fragment. `scripts/build.sh` builds the same interface with the standalone NDK/AIDL toolchain, including the AIDL backend shared library and its 32-bit variant.
 
-## The memory walks
+## Build requirements
 
-`readMemoryByPids` and `readMemoryByUids` are the two methods that do real
-work rather than a node read.
-
-The OPlus node was a per-uid memcg file. This kernel's memcg is per-app-group
-(`/dev/memcg/apps`), not per-uid, so the honest per-process source is
-`/proc/<pid>/smaps_rollup`, falling back to `/proc/<pid>/smaps`, falling back
-to `/proc/<pid>/statm`. The last fallback is not theoretical: the HAL runs in a
-generic `hal_*` SELinux domain that is denied the per-process smaps, while
-`statm` is world-readable. `statm` carries no PSS, so PSS is reported as 0
-rather than imitated from RSS.
-
-`readMemoryByUids` walks `/proc/<pid>/status` once, groups processes by their
-real uid (the first value on the `Uid:` line), and sums each group's
-smaps_rollup. One walk serves every requested uid.
-
-## The reply size cap
-
-A binder reply is capped at ~1 MiB. Several of the nodes the MTK fallbacks
-stand in for are far larger than the OPlus originals — `/proc/vmallocinfo` is
-1.15 MB on this kernel — and a reply that size fails the transaction outright
-with `EX_TRANSACTION_FAILED` (-129). Reads are capped at 256 KiB
-(`io_shim::MAX_READ`), so the call succeeds and returns a truncated but usable
-dump rather than failing.
+- Rust toolchain from `rust/rust-toolchain.toml` with the `aarch64-linux-android` target (installed by rustup).
+- Android NDK with `clang++` and `llvm-readelf` / `llvm-strings`.
+- AOSP `aidl` tool for the C++/AIDL path.
+- AOSP headers providing `android/binder_manager.h` for the C++ build.
+- A ROM/vendor tree supplying `libbinder_ndk.so` and the other platform libraries. Point `ROM_TREE` at it; the scripts default to a sibling `vendor-tree/` directory.
 
 ## Build
-
-Pinned toolchain: `rust-toolchain.toml` selects rustc 1.99.1 with the
-`aarch64-linux-android` target. Reproducibility only holds at that version.
 
 ```sh
 bash scripts/build_rust.sh
 ```
 
-That runs the host tests, cross-builds, renames `perf_service` to its on-device
-name, and verifies the identity strings and DT_NEEDED set.
+This runs the host unit tests, cross-builds the release binary, installs it under its service name, and checks the embedded identity strings and `DT_NEEDED` entries. The build links the platform `libbinder_ndk.so` from `ROM_TREE` through a local `vendor-libs/` symlink created by the script, because the service needs the `AServiceManager_addService` and `ABinderProcess_*` entry points that the public NDK stub does not export.
 
-Resulting DT_NEEDED:
-
-```
-libdl.so  liblog.so  libc.so  libbinder_ndk.so
-```
-
-No `libc++.so`. The one `__cxa_atexit` that trips a naive C++-leak grep
-resolves from libc.
-
-`libbinder_ndk.so` is linked from the ROM tree
-(`erofs/system/system/lib64/libbinder_ndk.so`), not the NDK stub — the service
-needs `AServiceManager_addService` and the `ABinderProcess_*` entry points the
-public stub does not export.
-
-Reproducibility: consecutive clean builds produce identical sha256
-(`038bc0166ce9e11d187c5ccaa6eb216ebb82e5234de23256d604c0c9580ab7f0`).
-
-## Identity
-
-```
-descriptor   vendor.oplus.hardware.performance.IPerformance
-instance     vendor.oplus.hardware.performance.IPerformance/default
-hash         a1051705ca91eedbba19076e9adacaae43014172
-version      1
-log tag      OplusPerfHAL
-```
-
-Matches `erofs/vendor/etc/init/vendor-oplus-hardware-performance-V1-service.rc`
-and the VINTF fragment `erofs/vendor/etc/vintf/manifest/manifest_performance_aidl.xml`.
-
-## Testing without a device
-
-`io_shim` routes every absolute path through a process-global root override.
-Tests set it to a temp directory, build a fake `/proc` tree (including process
-directories with `status`, `smaps_rollup`, `comm`, `statm`), and exercise the
-real code paths against it.
+To build the C++/AIDL backend path:
 
 ```sh
-cd rust && cargo test --offline
+bash scripts/build.sh
 ```
 
-The parcel round-trip tests use a hand-written byte-level parcel codec
-(`parcel.rs`) that mirrors libbinder's layout — i32s, the padded byte for the
-`char` field, length-prefixed strings, nullable arrays — so a change to a
-parcelable's field order fails on the host before it reaches a device.
+Host tests can be run directly with `cd rust && cargo test --offline`.
 
-## What is not done here
+## Staging
 
-- No repack, no flash. `scripts/stage_vendor.sh` copies the artifact into the
-  staging tree only.
-- The init rc, the VINTF fragment and the AIDL file are the stock ones.
-- Device-side liveness (does the framework actually bind and call it) waits on
-  the next vendor repack.
+```sh
+ROM_TREE=/path/to/rom bash scripts/stage_vendor.sh
+```
+
+The script copies the built binary to `vendor/bin/hw/vendor-oplus-hardware-performance-V1-service` under `ROM_TREE`. The existing init rc and VINTF fragment already reference that path. Staging does not build an image, flash a device, or regenerate file-context configuration.

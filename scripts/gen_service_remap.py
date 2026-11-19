@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-# Generate PerfHal.{h,cpp} for the reconstructed OPlus performance HAL,
-# REMAPPED onto this device's actual kernel surface.
+# Generate PerfHal.{h,cpp} for the OPlus performance HAL.
 #
 # Design: every method keeps its ORIGINAL OPlus node as the primary candidate
-# and adds this device's MTK/Transsion equivalent as fallbacks. At runtime the
-# first candidate that yields data (reads) or accepts a write (writes) wins.
-# That keeps the HAL faithful if it ever runs on an OPlus kernel, while
-# returning real values on the MT6893 kernel.
+# and adds equivalent kernel nodes as fallbacks. At runtime the first candidate
+# that yields data (reads) or accepts a write (writes) wins. That keeps the HAL
+# faithful on an OPlus kernel while returning real values elsewhere.
 #
 # Node kinds:
 #   F  = file   (read: first non-empty; write: first writable)
 #   D  = dir    (read: newline-joined entry names)
 #   T  = template (path contains %s -> substituted with the method's string arg)
-#
-# Evidence for every MTK path: re/kernel_nodes_equiv.md (each path confirmed to
-# exist on device 102562537K104189, 5.10.270-StargazerKernel-CelestialSphere).
 
-HDR = "/home/ryanistr/.hermes/cache/scratch/ooplusperf/gen_ndk/hdr/aidl/vendor/oplus/hardware/performance/IPerformance.h"
-OUTDIR = "/mnt/project/RomTools/ROM_WORKDIR/oos/ReconstructedHALSource/Oplus/OplusPerf/src"
+import os
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+CRATE = os.path.dirname(HERE)
+
+HDR = os.environ.get(
+    "AIDL_HEADER",
+    os.path.join(CRATE, "build", "gen", "hdr", "aidl", "vendor", "oplus",
+                 "hardware", "performance", "IPerformance.h"),
+)
+OUTDIR = os.environ.get("OUTDIR", os.path.join(CRATE, "src"))
 
 HI = "/proc/oplus_healthinfo/"
 JK = "/proc/jank_info/cpu_jank_info/"
@@ -694,96 +698,7 @@ for name, args in methods:
 open(f"{OUTDIR}/PerfHal.h", "w").write(hpp)
 open(f"{OUTDIR}/PerfHal.cpp", "w").write("\n".join(cpp))
 
-# --- emit the equivalence evidence table (referenced by the generated source) --
-EV = "/mnt/project/RomTools/ROM_WORKDIR/oos/ReconstructedHALSource/Oplus/OplusPerf/re/kernel_nodes_equiv.md"
-lines = [
-    "# OPlus node -> this device's equivalent",
-    "",
-    "Generated from the remap table in scripts/gen_service_remap.py — do not edit by hand.",
-    "",
-    "Every MTK/Transsion path below was confirmed to exist on device",
-    "102562537K104189 (Infinix GT 10 Pro / X6739, 5.10.270-StargazerKernel-CelestialSphere).",
-    "The original OPlus node stays the PRIMARY candidate; the equivalent is the",
-    "fallback, so the HAL is faithful on an OPlus kernel and returns real data here.",
-    "",
-    "| # | method | op | original OPlus node | this device's equivalent |",
-    "|---|--------|----|---------------------|------------------------|",
-]
-n = 0
-for name, _ in methods:
-    if name not in C:
-        continue
-    kind, paths = C[name]
-    n += 1
-    orig = paths[0] if paths else "-"
-    equiv = "<br>".join(paths[1:]) if len(paths) > 1 else "_(none: graceful default)_"
-    op = {"F": "file", "D": "dir", "T": "file (arg template)"}.get(kind, kind)
-    lines.append(f"| {n} | `{name}` | {op} | `{orig}` | {equiv} |")
-lines += [
-    "",
-    f"**{n} of {len(methods)} methods** are node-mapped; the remaining",
-    f"{len(methods) - n} have no OPlus node and no equivalent, and return a graceful",
-    "default (empty string / 0 / false / zeroed struct) — the same thing the shipped",
-    "HAL does when its node is absent.",
-    "",
-    "## Measured: OPlus node presence on this kernel",
-    "",
-    "Of the 139 nodes the shipped service references, only **18 exist** here",
-    "(9 of them the DAMON reclaim parameters, which are upstream Linux and work",
-    "as-is; the rest are OPlus kernel patches with no counterpart):",
-    "",
-]
-for p in ("/data/vendor/trans_sched/sched_impt_task",
-          "/dev/block/by-name/userdata", "/dev/memcg/",
-          "/proc/fs/ext4/", "/proc/version", "/sys/block/zram0/", "/sys/fs/f2fs/",
-          "/sys/module/damon_reclaim/parameters/aggr_interval",
-          "/sys/module/damon_reclaim/parameters/enabled",
-          "/sys/module/damon_reclaim/parameters/min_age",
-          "/sys/module/damon_reclaim/parameters/quota_ms",
-          "/sys/module/damon_reclaim/parameters/quota_reset_interval_ms",
-          "/sys/module/damon_reclaim/parameters/quota_sz",
-          "/sys/module/damon_reclaim/parameters/sample_interval",
-          "/sys/module/damon_reclaim/parameters/wmarks_high",
-          "/sys/module/damon_reclaim/parameters/wmarks_low",
-          "/sys/module/damon_reclaim/parameters/wmarks_mid"):
-    lines.append(f"- `{p}`")
-lines += [
-    "",
-    "The raw existence sweep is in `re/kernel_nodes.txt` (the shipped node list);",
-    "the device-side sweep output is in `re/kernel_nodes_sweep.txt` (this worktree",
-    "is gitignored and has no VCS, so the evidence lives in the tree).",
-    "",
-    "## Caveat: three fallbacks exist but cannot serve a read",
-    "",
-    "The sweep checked existence (`test -e`) **and** readability (open+read, which",
-    "is what the HAL actually does). All fallback paths exist; three are not",
-    "readable as plain files:",
-    "",
-    "| path | what it actually is | effect |",
-    "|---|---|---|",
-    "| `/proc/uid_procstat/set` | mode `--w--w--w-`, a **write-only** procfs node (`cat` -> I/O error) | `readPidsSet` / `readTidsSet` return empty; the write methods that use it are correct |",
-    "| `/sys/fs/f2fs/dm-39` | a **directory** of f2fs tunables, not a file | harmless: `readStorageFeature`'s first candidate `/proc/fs/ext4/dm-11/mb_groups` exists and answers, so the second is never consulted |",
-    "| `/proc/fs/ext4/` | a **directory** of per-device stats (`dm-11`, `dm-12`, ...) | correct usage — `getF2fsMovedBlks` has op `dir` |",
-    "",
-    "## Write safety",
-    "",
-    "Every write fallback was checked for what it actually controls, because on an",
-    "OPlus kernel the write went to an absent node (no effect) while here it lands",
-    "on a live MTK control node. A fallback is only used for a write when it",
-    "controls the SAME feature the OPlus node did; writing a different feature's",
-    "control node would change unrelated device behaviour. Read-only nodes are",
-    "harmless (the write fails with EINVAL, as it did on the stock HAL).",
-    "",
-    "One fallback was **removed** for safety: `readOplusReserve3` /",
-    "`writeOplusReserve3` pointed at `/dev/block/by-name/userdata`, i.e. the",
-    "user's data partition. The OPlus reserve partitions do not exist here and the",
-    "shipped HAL returned empty for both, so no fallback is the faithful and",
-    "safe answer.",
-]
-open(EV, "w").write("\n".join(lines) + "\n")
-
 mapped = sum(1 for n_, _ in methods if n_ in C)
 remapped = sum(1 for n_, _ in methods if n_ in C and len(C[n_][1]) > 1)
 print(f"wrote PerfHal.h + PerfHal.cpp with {len(methods)} methods")
 print(f"node-mapped: {mapped}/{len(methods)}   with MTK fallback: {remapped}")
-print(f"wrote {EV}")
