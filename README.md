@@ -4,6 +4,11 @@ A Rust implementation of the OPlus `vendor.oplus.hardware.performance` AIDL HAL 
 
 ## What the service does
 
+Functionally, the HAL is a read/write gateway for performance and diagnostics
+data. The framework asks it for CPU, GPU, memory and health information, and
+uses its setters to change scheduler, task-tracking and memory-management
+knobs. One interface covers both the telemetry reads and the tuning writes.
+
 The service registers a VINTF-stable binder interface that exposes the platform's performance and diagnostics nodes to the framework. The interface is wide and mostly shallow:
 
 - readers returning a `String` with a node dump, a value, or a version banner;
