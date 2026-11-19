@@ -52,6 +52,10 @@ Two tests re-parse the AIDL at test time and check that the node table and the a
 - AOSP headers providing `android/binder_manager.h` for the C++ build.
 - A ROM/vendor tree supplying `libbinder_ndk.so` and the other platform libraries. Point `ROM_TREE` at it; the scripts default to a sibling `vendor-tree/` directory.
 
+## Prebuilt
+
+[Get Prebuilt](https://github.com/Xia-s-Projekt/oplus-performance-hal/releases/latest) — prebuilt AArch64 service binary.
+
 ## Build
 
 ```sh
